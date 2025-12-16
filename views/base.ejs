@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snap Caption</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Rock+Salt&family=Grand+Hotel&display=swap" rel="stylesheet">
+
+  <style>
+    .rock-salt-regular {
+      font-family: "Rock Salt", cursive;
+      text-align: center;
+    }
+
+    .grand-hotel-regular {
+      font-family: "Grand Hotel", cursive;
+      text-align: center;
+    }
+
+    .box {
+      width: 400px;
+      height: 400px;
+      border: 2px dashed #000;
+      margin: 20px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .box.active {
+      background-color: #f0f0f0;
+    }
+
+    .box img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: cover;
+    }
+
+    .box p {
+      text-align: center;
+      color: #555;
+    }
+
+    .he {
+      text-align: center;
+      margin-top: 20px;
+    }
+
+    #but {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    input[type="file"] {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="rock-salt-regular">
+    <h1>Snap Caption</h1>
+  </div>
+
+  <div class="grand-hotel-regular">
+    <h3>Upload • Analyze • Go</h3>
+  </div>
+
+  <!-- Drag & Drop Box -->
+  <div class="box" id="dropBox">
+    <p>Drag & Drop Image<br>or Click to Upload</p>
+    <input type="file" id="imageInput" accept="image/*">
+  </div>
+
+  <!-- Submit -->
+  <div class="he">
+    <button id="but">Generate</button>
+  </div>
+
+  <div class="response">
+    <!-- Caption will appear here -->
+  </div>
+
+  <style>
+    .response {
+      margin: 20px auto;
+      font-family: Arial, sans-serif;
+      color: #333;
+      font-size: 1rem;
+      text-align: center;
+      min-height: 50px;
+      padding: 15px;
+      width: 400px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      background-color: #f9f9f9;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      white-space: pre-wrap;
+    }
+  </style>
+
+  <script>
+    const dropBox = document.getElementById("dropBox");
+    const imageInput = document.getElementById("imageInput");
+
+    dropBox.addEventListener("click", () => imageInput.click());
+
+    dropBox.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      dropBox.classList.add("active");
+    });
+
+    dropBox.addEventListener("dragleave", () => {
+      dropBox.classList.remove("active");
+    });
+
+    let currentFile = null;
+
+    dropBox.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropBox.classList.remove("active");
+      const file = e.dataTransfer.files[0];
+      handleFileSelection(file);
+    });
+
+    imageInput.addEventListener("change", () => {
+      const file = imageInput.files[0];
+      handleFileSelection(file);
+    });
+
+    function handleFileSelection(file) {
+      if (!file || !file.type.startsWith("image/")) return;
+      currentFile = file;
+      showPreview(file);
+    }
+
+    function showPreview(file) {
+      // Clear existing preview
+      const existingImg = dropBox.querySelector('img');
+      const placeholder = dropBox.querySelector('p');
+      if (existingImg) existingImg.remove();
+      if (placeholder) placeholder.style.display = 'none';
+
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(file);
+      dropBox.insertBefore(img, imageInput);
+    }
+
+    // Clear status on load
+    window.addEventListener('DOMContentLoaded', () => {
+      const resp = document.querySelector('.response');
+      if (resp) resp.textContent = '';
+
+      const gen = document.getElementById('but');
+      gen.addEventListener('click', async (e) => {
+        e.preventDefault();
+        const resp = document.querySelector('.response');
+        resp.textContent = '';
+
+        if (!currentFile) {
+          resp.textContent = 'Please select an image';
+          return;
+        }
+        gen.disabled = true;
+        gen.textContent = 'Generating...';
+        const fd = new FormData();
+        fd.append('image', currentFile);
+        try {
+          const r = await fetch('/caption', { method: 'POST', body: fd });
+          if (!r.ok) {
+            const text = await r.text();
+            resp.textContent = `Server error ${r.status}: ${text}`;
+          } else {
+            const j = await r.json();
+            let rawText = j.caption || j.error || 'No caption returned';
+            // Remove markdown symbols like *, #, _, `
+            resp.textContent = rawText.replace(/[*#_`]/g, '');
+          }
+        } catch (err) {
+          console.error(err);
+          resp.textContent = 'Upload failed';
+        } finally {
+          gen.disabled = false;
+          gen.textContent = 'Generate';
+        }
+      });
+    });
+  </script>
+
+</body>
+
+</html>
