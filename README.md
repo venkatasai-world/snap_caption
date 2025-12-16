@@ -1,7 +1,7 @@
 # 📸 AI Image Caption Generator (Gemini 2.5 Flash)
 
 
-::contentReference[oaicite:0]{index=0}
+<img src="snap.png">
 
 
 ## 📖 Project Description
